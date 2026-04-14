@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Local Search</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+
+      .container {
+        width: min(720px, 92vw);
+      }
+
+      form {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 0.5rem 0.75rem;
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+      }
+
+      input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 1rem;
+        padding: 0.5rem 0.75rem;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.55rem 1rem;
+        cursor: pointer;
+        font-weight: 600;
+        background: #2563eb;
+        color: #fff;
+      }
+
+      #results {
+        margin-top: 1.25rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.9rem 1rem;
+      }
+
+      .card a {
+        color: #1d4ed8;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .muted {
+        color: #64748b;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <form id="searchForm">
+        <input id="q" name="q" type="search" autocomplete="off" placeholder="Search locally..." />
+        <button type="submit">Search</button>
+      </form>
+      <section id="results" aria-live="polite"></section>
+    </main>
+
+    <script>
+      const form = document.getElementById('searchForm');
+      const q = document.getElementById('q');
+      const results = document.getElementById('results');
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const query = q.value.trim();
+
+        if (!query) {
+          results.innerHTML = '<p class="muted">Type something to search.</p>';
+          return;
+        }
+
+        results.innerHTML = '<p class="muted">Loading…</p>';
+
+        try {
+          const res = await fetch(`/search?q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+
+          if (!Array.isArray(data.results) || data.results.length === 0) {
+            results.innerHTML = `<p class="muted">No results for "${escapeHtml(query)}".</p>`;
+            return;
+          }
+
+          results.innerHTML = data.results
+            .map(
+              (item) => `
+                <article class="card">
+                  <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a>
+                  <p class="muted">${escapeHtml(item.snippet)}</p>
+                </article>
+              `
+            )
+            .join('');
+        } catch {
+          results.innerHTML = '<p class="muted">Search request failed.</p>';
+        }
+      });
+    </script>
+  </body>
+</html>
